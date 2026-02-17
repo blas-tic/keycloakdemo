@@ -11,4 +11,5 @@ import com.example.keycloakdemo.model.Cliente;
 public interface ClienteRepository extends JpaRepository<Cliente, Long> {
     Optional<Cliente> findByEmail(String email);
     Optional<Cliente> findByKeycloakUserId(String keycloakUserId);
+    boolean existsByEmail(String email);   
 }

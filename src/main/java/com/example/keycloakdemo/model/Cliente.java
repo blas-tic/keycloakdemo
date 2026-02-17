@@ -1,5 +1,6 @@
 package com.example.keycloakdemo.model;
 
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -33,10 +34,13 @@ public class Cliente {
    private String direccion;
    private String telefono;
 
-   @Column(nullable = false)
+   @Column(nullable = false, unique = true)
    private String keycloakUserId;
+
+   @Column()
+   private LocalDateTime fechaRegistro;
 
    @OneToMany(mappedBy = "cliente", cascade = CascadeType.ALL)
    private List<Pedido> pedidos = new ArrayList<>();
-   
+
 }

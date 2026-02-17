@@ -10,4 +10,6 @@ import com.example.keycloakdemo.model.Categoria;
 @Repository
 public interface CategoriaRepository extends JpaRepository<Categoria, Long> {
     Optional<Categoria> findByNombre(String nombre);
+
+    boolean existsByNombre(String nombre);
 }

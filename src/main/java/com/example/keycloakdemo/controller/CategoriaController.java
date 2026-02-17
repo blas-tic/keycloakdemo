@@ -14,42 +14,52 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.example.keycloakdemo.dto.CategoriaDTO;
-import com.example.keycloakdemo.model.Categoria;
+import com.example.keycloakdemo.dto.CategoriaRequestDTO;
+import com.example.keycloakdemo.dto.CategoriaResponseDTO;
 import com.example.keycloakdemo.service.CategoriaService;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 
 @RestController
 @RequestMapping("/api/categorias")
 @RequiredArgsConstructor
+@Tag(name = "Categorías", description = "Gestión de categorías de productos")
+@SecurityRequirement(name = "bearerAuth")
 public class CategoriaController {
 
     private final CategoriaService categoriaService;
 
     @PostMapping
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<Categoria> crearCategoria(@Valid @RequestBody Categoria categoria) {
+    @Operation(summary = "Crear categoría", description = "Solo accesible por ADMIN")
+    public ResponseEntity<CategoriaResponseDTO> crearCategoria(@Valid @RequestBody CategoriaRequestDTO categoria) {
         return new ResponseEntity<>(categoriaService.crearCategoria(categoria), HttpStatus.CREATED);
     }
 
     @GetMapping
     @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<List<CategoriaDTO>> obtenerTodasCategorias() {
+    @Operation(summary = "Listar Categorías", description = "Cualquiera autenticado")
+    public ResponseEntity<List<CategoriaResponseDTO>> obtenerTodasCategorias() {
         return ResponseEntity.ok(categoriaService.obtenerTodas());
     }
 
     @GetMapping("/{id}")
     @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<Categoria> obtenerCategoria(@PathVariable Long id) {
+    @Operation(summary = "Obtener categoría", description = "Cualquiera autenticado")
+    public ResponseEntity<CategoriaResponseDTO> obtenerCategoria(@PathVariable Long id) {
         return ResponseEntity.ok(categoriaService.obtenerPorId(id));
     }
 
     @PutMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<Categoria> actualizarCategoria(@PathVariable Long id,
-                                                         @Valid @RequestBody Categoria categoria) {
+    public ResponseEntity<CategoriaResponseDTO> actualizarCategoria(@PathVariable Long id,
+                                                         @Valid @RequestBody CategoriaRequestDTO categoria) {
+
+
         return ResponseEntity.ok(categoriaService.actualizarCategoria(id, categoria));
     }
 

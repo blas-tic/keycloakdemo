@@ -3,82 +3,114 @@ package com.example.keycloakdemo.service;
 import com.example.keycloakdemo.dto.CategoriaResumenDTO;
 import com.example.keycloakdemo.dto.ProductoRequestDTO;
 import com.example.keycloakdemo.dto.ProductoResponseDTO;
+import com.example.keycloakdemo.dto.ProductoResumenDTO;
+import com.example.keycloakdemo.exception.ResourceNotFoundException;
 import com.example.keycloakdemo.model.*;
 import com.example.keycloakdemo.repository.*;
-import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
+@Transactional
+@Slf4j
 public class ProductoService {
 
     private final ProductoRepository repo;
     private final CategoriaRepository categoriaRepository;
 
-    @Transactional
     public Producto crearProducto(Producto producto) {
         return repo.save(producto);
     }
 
-    public Producto crearProducto(ProductoRequestDTO dto) {
-        Categoria categoria = categoriaRepository.findById(dto.getCategoriaID())
-            .orElseThrow(() -> new EntityNotFoundException("Categoria no encontrada con ID: " 
-                + dto.getCategoriaID()));
+    public ProductoResponseDTO crearProducto(ProductoRequestDTO request) {
+        // buscar categoria
+        Categoria categoria = categoriaRepository.findById(request.getCategoriaId())
+                .orElseThrow(() -> new ResourceNotFoundException("Categoria no encontrada con ID: "
+                        + request.getCategoriaId()));
+
         Producto producto = new Producto();
-        producto.setNombre(dto.getNombre());
+        producto.setNombre(request.getNombre());
         producto.setCategoria(categoria);
-        producto.setDescripcion(dto.getDescripcion());
-        producto.setPrecio(dto.getPrecio());
-        producto.setStock(dto.getStock());
+        producto.setDescripcion(request.getDescripcion());
+        producto.setPrecio(request.getPrecio());
+        producto.setStock(request.getStock());
 
-        return repo.save(producto);
+        Producto guardado = repo.save(producto);
+        log.info("Producto creado con ID: {}", guardado.getId());
+
+        return toResponseDTO(producto);
+
     }
 
-    public List<Producto> obtenerTodos() {
-        return repo.findAll();
-    }
+    private ProductoResponseDTO toResponseDTO(Producto producto) {
 
-    public Producto obtenerPorId(Long id) {
-        return repo.findById(id)
-            .orElseThrow(() -> new EntityNotFoundException("Producto no encontrado"));
-    }
+        CategoriaResumenDTO cDto = new CategoriaResumenDTO();
+        cDto.setId(producto.getCategoria().getId());
+        cDto.setNombre(producto.getCategoria().getNombre());
 
-    @Transactional
-    public Producto actualizarProducto(Long id, Producto ProductoActualizado) {
-        Producto Producto = obtenerPorId(id);
-        Producto.setNombre(ProductoActualizado.getNombre());
-        Producto.setDescripcion(ProductoActualizado.getDescripcion());
-        Producto.setPrecio(ProductoActualizado.getPrecio());
-        Producto.setStock(ProductoActualizado.getStock());
-        Producto.setCategoria(ProductoActualizado.getCategoria());
-        return repo.save(Producto);
-    }
-
-    @Transactional
-    public void eliminarProducto(Long id) {
-        repo.deleteById(id);
-    }
-
-    public ProductoResponseDTO convertirADTO(Producto producto) {
         ProductoResponseDTO dto = new ProductoResponseDTO();
         dto.setId(producto.getId());
         dto.setNombre(producto.getNombre());
         dto.setDescripcion(producto.getDescripcion());
         dto.setPrecio(producto.getPrecio());
         dto.setStock(producto.getStock());
-        if (producto.getCategoria() != null) {
-            CategoriaResumenDTO cDto = new CategoriaResumenDTO();
-            cDto.setId(producto.getCategoria().getId());
-            cDto.setNombre(producto.getCategoria().getNombre());
+        dto.setCategoria(cDto);
 
-            dto.setCategoria(cDto);
-        }
         return dto;
     }
 
+    public List<ProductoResponseDTO> obtenerTodos() {
+        List<Producto> productos = repo.findAll();
+
+        return productos.stream()
+            .map(this::toResponseDTO)
+            .collect(Collectors.toList());
+    }
+    
+    public ProductoResponseDTO obtenerPorId(Long id) {
+        Producto producto = repo.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Producto no encontrado"));
+        return toResponseDTO(producto);
+    }
+
+    public ProductoResponseDTO actualizarProducto(Long id, ProductoRequestDTO request) {
+        Producto producto = repo.findById(id)
+            .orElseThrow(() -> new ResourceNotFoundException("No se encuentra producto con ID: " + id));
+
+        // actualizar categoria si cambió
+        if (!producto.getCategoria().getId().equals(request.getCategoriaId())){
+            Categoria categoria = categoriaRepository.findById(request.getCategoriaId())
+                .orElseThrow(() -> new ResourceNotFoundException("No se encuentra categoría con ID: " + request.getCategoriaId()));
+            producto.setCategoria(categoria);
+        }
+        producto.setNombre(request.getNombre());
+        producto.setDescripcion(request.getDescripcion());
+        producto.setPrecio(request.getPrecio());
+        producto.setStock(request.getStock());
+
+        Producto actualizado = repo.save(producto);
+        log.info("Producto actualizado con ID: {}", actualizado.getId());
+
+        return toResponseDTO(actualizado);
+    }
+
+    public void eliminarProducto(Long id) {
+        if (!repo.existsById(id)) {
+            throw new ResourceNotFoundException("No se encuentra producto con ID: " + id);
+        }
+        repo.deleteById(id);
+        log.info("Producto eliminado con ID: {}", id);
+    }
+
+    // Método público para usar en PedidoService
+    public ProductoResumenDTO toResumenDTO(Producto producto) {
+        return toResumenDTO(producto);
+    }
+
 }
-
-
